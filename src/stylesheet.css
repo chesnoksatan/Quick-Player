@@ -1,0 +1,78 @@
+.media {
+  border-radius: 8px;
+}
+
+.media-controls-box {
+  padding: 8px;
+}
+
+.media-icon-small {
+  border-radius: 8px;
+  box-shadow: 4px 4px 32px 8px rgba(127, 127, 127, 0.3);
+  background-color: transparent;
+}
+
+.media-message-title {
+  margin-left: 8px;
+  margin-right: 8px;
+  font-weight: bold;
+  max-width: 16em;
+}
+
+.media-message-artist {
+  margin-left: 8px;
+  margin-right: 8px;
+  max-width: 16em;
+}
+
+.media-menu-button {
+  padding: 8px;
+  background-color: transparent;
+}
+
+.media-menu-button:hover {
+  background-color: rgba(127, 127, 127, 0.1);
+}
+
+.media-menu-button:active {
+  background-color: rgba(127, 127, 127, 0.3);
+}
+
+.media-control-box {
+  padding-top: 8px;
+}
+
+.media-control-button {
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.media-control-button:checked {
+  background-color: rgba(127, 127, 127, 0.5);
+}
+
+.media-control-button:hover {
+  background-color: rgba(127, 127, 127, 0.1);
+}
+
+.media-control-button:checked:hover {
+  background-color: rgba(127, 127, 127, 0.2);
+}
+
+.media-control-button:active {
+  background-color: rgba(127, 127, 127, 0.3);
+}
+
+.media-control-button:checked:active {
+  background-color: rgba(127, 127, 127, 0.4);
+}
+
+.media-icon {
+  border-radius: 8px;
+  box-shadow: 4px 4px 32px 8px rgba(127, 127, 127, 0.3);
+  background-color: transparent;
+}
+
+.volume {
+  border-radius: 32px;
+}

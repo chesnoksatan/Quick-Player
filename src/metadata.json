@@ -1,0 +1,9 @@
+{
+  "description": "This is a Gnome extension that allows you to add player to the quick settings menu",
+  "name": "Quick Player",
+  "url": "https://github.com/chesnoksatan/Quick-Player",
+  "shell-version": ["45", "46", "47"],
+  "uuid": "quick-player@chesnoksatan",
+  "gettext-domain": "quick-player",
+  "version": 1
+}
