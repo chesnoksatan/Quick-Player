@@ -18,8 +18,6 @@ export class Player extends Signals.EventEmitter {
         this._proxy = MprisPlayerProxy(Gio.DBus.session, this.address, "/org/mpris/MediaPlayer2", this._onPlayerProxyReady.bind(this));
     }
 
-    destroy() {}
-
     _onPlayerProxyReady() {
         this._proxy.connectObject('g-properties-changed', () => this._update(), this);
         this._update();

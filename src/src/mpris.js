@@ -19,8 +19,6 @@ export class Mpris extends Signals.EventEmitter {
         this._app = null;
     }
 
-    destroy() {}
-
     _onProxyReady() {
         this._proxy.connectObject('g-properties-changed', () => this._update(), this);
         this._update();
@@ -52,7 +50,7 @@ export class Mpris extends Signals.EventEmitter {
     _close() {
         this._proxy.disconnectObject(this);
         this._proxy = null;
-
+        
         this.emit('closed');
     }
 

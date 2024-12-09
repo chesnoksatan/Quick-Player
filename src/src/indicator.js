@@ -9,229 +9,276 @@ import St from "gi://St";
 import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 
+import { Mpris } from './mpris.js';
+import { Player } from './player.js';
+
 import { CoverMenuItem  } from "./menu/cover.js";
 import { VolumeMenuItem } from "./menu/volume.js";
 import { ProgressMenuItem } from "./menu/progress.js";
-import { ControlMenuItem } from "./menu/conrols.js"; 
+import { ControlMenuItem } from "./menu/conrols.js";
 
 export const Indicator = GObject.registerClass(
-    class Indicator extends SystemIndicator {
-        _init(mpris, player) {
-            super._init();
+class Indicator extends SystemIndicator {
+    _init() {
+        super._init();
 
-            this.player = player;
-            this.mpris = mpris;
+        this._controls = new Map();
 
-            this._indicator = this._addIndicator();
-            this._indicator.icon_name = 'audio-x-generic-symbolic';
+        this._indicator = this._addIndicator();
+        this._indicator.icon_name = 'audio-x-generic-symbolic';
 
-            this._toggle = new MediaControls(this.mpris, this.player);
-            this._toggle.connect("clicked", () => this.mpris.raise());
+        this.hide();
+    }
 
-            this.quickSettingsItems.push(this._toggle);
+    removeControl(busName) {
+        const control = this._controls.get(busName);
+        if (!control) {
+            return;
         }
 
-        destroy() {
-            this.quickSettingsItems.forEach(item => item.destroy());
-            this._indicator.destroy();
-            super.destroy();
-        }
+        control.hide();
+        this._controls.delete(busName);
 
-        addControls(mpris, player) {
-
+        if (this._controls.size < 1) {
+            this.hide();
         }
     }
-)
 
-const MediaControls = GObject.registerClass(
-    class MediaControls extends QuickSettingsItem {
-        _init(mpris, player) {
-            super._init({
-                hasMenu: true,
-                style_class: 'message media',
-            });
+    addControls(busName) {
+        const control = new MediaControls(busName);
+        control.connect("closed", () => this.removeControl(control.busName));
+        this._controls.set(busName, control);
 
-            this._player = player;
-            this._mpris = mpris;
+        const sibling = Main.panel.statusArea.quickSettings._backgroundApps?.quickSettingsItems?.at(-1) ?? null;
+        Main.panel.statusArea.quickSettings.menu.insertItemBefore(control, sibling, 2);
 
-            this.set_child(new St.BoxLayout({
-                style_class: 'media-controls-box',
-                y_expand: true,
-            }));
+        this.show();
+    }
 
-            this._icon = new St.Icon({
-                style_class: 'media-icon-small',
-                y_expand: true,
-                visible: true,
-                icon_size: 72,
-            });
-            this.child.add_child(this._icon);
+    show() {
+        this.visible = true;
+    }
 
-            const contentBox = new St.BoxLayout({
-                vertical: true,
-                x_expand: true,
-            });
-            this.child.add_child(contentBox);
+    hide() {
+        this.visible = false;
+    }
 
-            const baseBox = new St.BoxLayout();
-            contentBox.add_child(baseBox);
+    destroy() {
+        this.quickSettingsItems.forEach(item => item.destroy());
+        this._indicator.destroy();
+        super.destroy();
+    }
+})
 
-            let messageBox = new St.BoxLayout({
-                x_align: Clutter.ActorAlign.START,
-                vertical: true,
-            });
-            baseBox.add_child(messageBox);
-            baseBox.add_child(new Clutter.Actor({x_expand: true}))
+const MediaControls = GObject.registerClass({
+    Signals: {'closed': {}},
+}, class MediaControls extends QuickSettingsItem {
+    _init(busName) {
+        super._init({
+            hasMenu: true,
+            style_class: 'message media',
+        });
 
-            this.titleLabel = new St.Label({
-                style_class: 'media-message-title',
-                x_align: Clutter.ActorAlign.START,
-            });
-            this.titleLabel.clutter_text.set_line_wrap(true);
-            this.titleLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.busName = busName;
 
-            this.artistLabel = new St.Label({
-                style_class: 'media-message-artist',
-                x_align: Clutter.ActorAlign.START,
-            });
-            this.artistLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this._mpris = new Mpris(this.busName);
+        this._player = new Player(this.busName);
 
-            messageBox.add_child(this.titleLabel);
-            messageBox.add_child(this.artistLabel);
+        this._mpris.connectObject('closed', this._closed.bind(this), this);
+        this._player.connectObject('closed', this._closed.bind(this), this);
 
-            this._menuButton = new St.Button({
-                iconName: 'pan-down-symbolic',
-                style_class: 'icon-button media-menu-button',
-                y_align: Clutter.ActorAlign.START,
-            });
-            this._menuButton.connect("clicked", () => this.menu.open())
-            baseBox.add_child(this._menuButton);
+        this.set_child(new St.BoxLayout({
+            style_class: 'media-controls-box',
+            y_expand: true,
+        }));
 
-            let controlBox = new St.BoxLayout({
-                style_class: 'media-control-box',
-                x_expand: true,
-                y_expand: true,
-                x_align: Clutter.ActorAlign.CENTER,
-            })
+        this._icon = new St.Icon({
+            style_class: 'media-icon-small',
+            y_expand: true,
+            visible: true,
+            icon_size: 72,
+        });
+        this.child.add_child(this._icon);
 
-            this._prevButton = new St.Button({
-                iconName: 'media-skip-backward-symbolic',
-                style_class: 'icon-button media-control-button',
-                y_expand: true,
-            });
-            this._prevButton.connect('clicked', () => this._player.previous());
-            controlBox.add_child(this._prevButton);
+        const contentBox = new St.BoxLayout({
+            vertical: true,
+            x_expand: true,
+        });
+        this.child.add_child(contentBox);
 
-            this._playPauseButton = new St.Button({
-                iconName: 'media-playback-pause-symbolic',
-                style_class: 'icon-button media-control-button',
-                y_expand: true,
-            });
-            this._playPauseButton.connect('clicked', () => this._player.toggleState());
-            controlBox.add_child(this._playPauseButton);
+        const baseBox = new St.BoxLayout();
+        contentBox.add_child(baseBox);
 
-            this._nextButton = new St.Button({
-                iconName: 'media-skip-forward-symbolic',
-                style_class: 'icon-button media-control-button',
-                y_expand: true,
-            });
-            this._nextButton.connect('clicked', () => this._player.next());
-            controlBox.add_child(this._nextButton);
+        let messageBox = new St.BoxLayout({
+            x_align: Clutter.ActorAlign.START,
+            vertical: true,
+        });
+        baseBox.add_child(messageBox);
+        baseBox.add_child(new Clutter.Actor({x_expand: true}))
 
-            contentBox.add_child(controlBox)
+        this.titleLabel = new St.Label({
+            style_class: 'media-message-title',
+            x_align: Clutter.ActorAlign.START,
+        });
+        this.titleLabel.clutter_text.set_line_wrap(true);
+        this.titleLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
 
-            this.menu.addMenuItem(new PopupMenu.PopupMenuSection());
-            this.menu.setHeader("music-note-single-symbolic", "", "");
+        this.artistLabel = new St.Label({
+            style_class: 'media-message-artist',
+            x_align: Clutter.ActorAlign.START,
+        });
+        this.artistLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
 
-            const sourceIconEffect = new Clutter.DesaturateEffect();
-            this.sourceIcon = new St.Icon({
-                style_class: 'message-source-icon',
-                y_align: Clutter.ActorAlign.CENTER,
-                fallback_icon_name: 'application-x-executable-symbolic',
-            });
-            this.sourceIcon.add_effect(sourceIconEffect);
-    
-            this.sourceIcon.connect('style-changed', () => {
-                const themeNode = this.sourceIcon.get_theme_node();
-                sourceIconEffect.enabled = themeNode.get_icon_style() === St.IconStyle.SYMBOLIC;
-            });
+        messageBox.add_child(this.titleLabel);
+        messageBox.add_child(this.artistLabel);
 
-            this._appButton = new St.Button({
-                style_class: 'icon-button media-menu-button',
-                x_align: Clutter.ActorAlign.END,
-                child: this.sourceIcon
-            })
-            this._appendSuffix(this._appButton);
+        this._menuButton = new St.Button({
+            iconName: 'pan-down-symbolic',
+            style_class: 'icon-button media-menu-button',
+            y_align: Clutter.ActorAlign.START,
+        });
+        this._menuButton.connect("clicked", () => this.menu.open())
+        baseBox.add_child(this._menuButton);
 
-            this.menu.addMenuItem(new CoverMenuItem(this._player));
-            this.menu.addMenuItem(new ProgressMenuItem(this._player));
-            this.menu.addMenuItem(new ControlMenuItem(this._player));
-            this.menu.addMenuItem(new VolumeMenuItem(this._player));
+        let controlBox = new St.BoxLayout({
+            style_class: 'media-control-box',
+            x_expand: true,
+            y_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        })
 
-            this.connect("clicked", this._clicked.bind(this));
-            this._appButton.connect("clicked", this._clicked.bind(this));
-            this._mpris.connectObject('changed', this._updateMpris.bind(this), this);
-            this._player.connectObject('changed', this._updatePlayer.bind(this), this);
-            this._updateMpris();
-            this._updatePlayer();
-        }
+        this._prevButton = new St.Button({
+            iconName: 'media-skip-backward-symbolic',
+            style_class: 'icon-button media-control-button',
+            y_expand: true,
+        });
+        this._prevButton.connect('clicked', () => this._player.previous());
+        controlBox.add_child(this._prevButton);
 
-        // HACK: addHeaderSuffix function insert spacer after suffix, so we need manually place suffix after spacer
-        _appendSuffix(actor) {
-            const {layoutManager: headerLayout} = this.menu._header;
-            const side = this.menu.actor.text_direction === Clutter.TextDirection.RTL
-                ? Clutter.GridPosition.LEFT
-                : Clutter.GridPosition.RIGHT;
-            headerLayout.attach_next_to(actor, this.menu._headerSpacer, side, 1, 1);
-        }
+        this._playPauseButton = new St.Button({
+            iconName: 'media-playback-pause-symbolic',
+            style_class: 'icon-button media-control-button',
+            y_expand: true,
+        });
+        this._playPauseButton.connect('clicked', () => this._player.toggleState());
+        controlBox.add_child(this._playPauseButton);
 
-        _clicked() {
-            if (this._mpris.canRaise) {
-                Main.panel.closeQuickSettings();
-                this._mpris.raise();
-            }
-        }
-    
-        _updateNavButton(button, sensitive) {
-            button.reactive = sensitive;
-        }
+        this._nextButton = new St.Button({
+            iconName: 'media-skip-forward-symbolic',
+            style_class: 'icon-button media-control-button',
+            y_expand: true,
+        });
+        this._nextButton.connect('clicked', () => this._player.next());
+        controlBox.add_child(this._nextButton);
 
-        _updateMpris() {}
+        contentBox.add_child(controlBox)
 
-        _updatePlayer() {
-            if (!this._player || !this._mpris)
-                return;
+        this.menu.addMenuItem(new PopupMenu.PopupMenuSection());
+        this.menu.setHeader("music-note-single-symbolic", "", "");
 
-            let icon;
-            if (this._player.artUrl) {
-                const file = Gio.File.new_for_uri(this._player.artUrl);
-                icon = new Gio.FileIcon({file});
-            } else {
-                icon = new Gio.ThemedIcon({name: 'audio-x-generic-symbolic'});
-            }
+        const sourceIconEffect = new Clutter.DesaturateEffect();
+        this.sourceIcon = new St.Icon({
+            style_class: 'message-source-icon',
+            y_align: Clutter.ActorAlign.CENTER,
+            fallback_icon_name: 'application-x-executable-symbolic',
+        });
+        this.sourceIcon.add_effect(sourceIconEffect);
 
-            let title = this._player.title;
-            let artist = this._player.artist;
+        this.sourceIcon.connect('style-changed', () => {
+            const themeNode = this.sourceIcon.get_theme_node();
+            sourceIconEffect.enabled = themeNode.get_icon_style() === St.IconStyle.SYMBOLIC;
+        });
 
-            this.titleLabel.clutter_text.set_markup(title);
-            this.artistLabel.clutter_text.set_markup(artist);
-            this.menu.setHeader("audio-x-generic-symbolic", title, artist);
+        this._appButton = new St.Button({
+            style_class: 'icon-button media-menu-button',
+            x_align: Clutter.ActorAlign.END,
+            child: this.sourceIcon
+        })
+        this._appendSuffix(this._appButton);
 
-            this.sourceIcon.gicon = this._mpris.app?.get_icon() ?? null
+        this.menu.addMenuItem(new CoverMenuItem(this._player));
+        this.menu.addMenuItem(new ProgressMenuItem(this._player));
+        this.menu.addMenuItem(new ControlMenuItem(this._player));
+        this.menu.addMenuItem(new VolumeMenuItem(this._player));
 
-            this._icon.gicon = icon;
-            this._icon.visible = !!icon;
-    
-            let isPlaying = this._player.status === 'Playing';
-            let iconName = isPlaying
-                ? 'media-playback-pause-symbolic'
-                : 'media-playback-start-symbolic';
-            this._playPauseButton.child.icon_name = iconName;
-    
-            this._updateNavButton(this._prevButton, this._player.hasPrevious);
-            this._updateNavButton(this._playPauseButton, this._player.canPlay || this._player.canPause);
-            this._updateNavButton(this._nextButton, this._player.hasNext);
-            this._updateNavButton(this._appButton, this._mpris.canRaise);
+        this.connect("clicked", this._clicked.bind(this));
+        this._appButton.connect("clicked", this._clicked.bind(this));
+        this._mpris.connectObject('changed', this._updateMpris.bind(this), this);
+        this._player.connectObject('changed', this._updatePlayer.bind(this), this);
+        this._updateMpris();
+        this._updatePlayer();
+
+        this.connect("clicked", () => this._mpris.raise());
+    }
+
+    _closed() {
+        this.emit('closed');
+    }
+
+    destroy() {
+        this._mpris.destroy();
+        this._player.destroy();
+    }
+
+    // HACK: addHeaderSuffix function insert spacer after suffix, so we need manually place suffix after spacer
+    _appendSuffix(actor) {
+        const {layoutManager: headerLayout} = this.menu._header;
+        const side = this.menu.actor.text_direction === Clutter.TextDirection.RTL
+            ? Clutter.GridPosition.LEFT
+            : Clutter.GridPosition.RIGHT;
+        headerLayout.attach_next_to(actor, this.menu._headerSpacer, side, 1, 1);
+    }
+
+    _clicked() {
+        if (this._mpris.canRaise) {
+            Main.panel.closeQuickSettings();
+            this._mpris.raise();
         }
     }
-)
+
+    _updateNavButton(button, sensitive) {
+        button.reactive = sensitive;
+    }
+
+    _updateMpris() {
+        if (!this._mpris)
+            return;
+
+        this.sourceIcon.gicon = this._mpris.app?.get_icon() ?? null
+        this._updateNavButton(this._appButton, this._mpris.canRaise);
+    }
+
+    _updatePlayer() {
+        if (!this._player)
+            return;
+
+        let icon;
+        if (this._player.artUrl) {
+            const file = Gio.File.new_for_uri(this._player.artUrl);
+            icon = new Gio.FileIcon({file});
+        } else {
+            icon = new Gio.ThemedIcon({name: 'audio-x-generic-symbolic'});
+        }
+
+        let title = this._player.title;
+        let artist = this._player.artist;
+
+        this.titleLabel.clutter_text.set_markup(title);
+        this.artistLabel.clutter_text.set_markup(artist);
+        this.menu.setHeader("audio-x-generic-symbolic", title, artist);
+
+
+        this._icon.gicon = icon;
+        this._icon.visible = !!icon;
+
+        let isPlaying = this._player.status === 'Playing';
+        let iconName = isPlaying
+            ? 'media-playback-pause-symbolic'
+            : 'media-playback-start-symbolic';
+        this._playPauseButton.child.icon_name = iconName;
+
+        this._updateNavButton(this._prevButton, this._player.hasPrevious);
+        this._updateNavButton(this._playPauseButton, this._player.canPlay || this._player.canPause);
+        this._updateNavButton(this._nextButton, this._player.hasNext);
+    }
+})

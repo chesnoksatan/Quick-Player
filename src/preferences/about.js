@@ -8,7 +8,7 @@ import { gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensio
 import contributors from "../data/contributors/contributors.js"
 
 export const AboutPage = GObject.registerClass({
-    GTypeName: 'QuickPlayer.AboutPage',
+    GTypeName: 'QuickPlayer_AboutPage',
 }, class AboutPage extends Adw.PreferencesPage {
     constructor(metadata) {
         super({
@@ -212,18 +212,26 @@ export const AboutPage = GObject.registerClass({
 
         const versionButton = new Gtk.Button({
             label: this.metadata.version?.toString() || _("Unknown"),
-            css_classes: ["pill", "small", "success"],
+            css_classes: ["pill", "success"],
             halign: Gtk.Align.CENTER,
         });
         box.append(versionButton);
 
+        versionButton.connect('clicked', () => {
+            const clipboard = Gdk.Display.get_default().get_clipboard();
+            clipboard.set_content(Gdk.ContentProvider.new_for_value(versionButton.label))
 
+            this.root.add_toast(new Adw.Toast({
+                title: _('Copied to clipboard')
+            }));
+        });
+    
         return group;
     }
 })
 
 const LinkRow = GObject.registerClass({
-    GTypeName: 'QuickPlayer.LinkRow',
+    GTypeName: 'QuickPlayer_LinkRow',
 }, class LinkRow extends Adw.ActionRow {
     _init(url, params) {
         this.url = url;
@@ -246,7 +254,7 @@ const LinkRow = GObject.registerClass({
 })
 
 const Contributor = GObject.registerClass({
-    GTypeName: 'QuickPlayer.Contributor',
+    GTypeName: 'QuickPlayer_Contributor',
 }, class Contributor extends Adw.ActionRow {
     _init(avatar, url, params) {
         this.avatar = avatar;
