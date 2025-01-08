@@ -36,7 +36,9 @@ class Indicator extends SystemIndicator {
             return;
         }
 
-        control.hide();
+        console.log("[QuickPlayerExtension]", "Remove Media Controls for DBus", busName);
+
+        control.destroy();
         this._controls.delete(busName);
 
         if (this._controls.size < 1) {
@@ -45,12 +47,16 @@ class Indicator extends SystemIndicator {
     }
 
     addControls(busName) {
+
+        console.log("[QuickPlayerExtension]", "Try to add new Media Controls for DBus", busName);
+
         const control = new MediaControls(busName);
         control.connect("closed", () => this.removeControl(control.busName));
-        this._controls.set(busName, control);
 
-        const sibling = Main.panel.statusArea.quickSettings._backgroundApps?.quickSettingsItems?.at(-1) ?? null;
-        Main.panel.statusArea.quickSettings.menu.insertItemBefore(control, sibling, 2);
+        if (!this._controls.get(busName)) {
+            this._controls.set(busName, control);
+            Main.panel.statusArea.quickSettings.menu.addItem(control, 2);
+        }
 
         this.show();
     }
@@ -64,7 +70,11 @@ class Indicator extends SystemIndicator {
     }
 
     destroy() {
-        this.quickSettingsItems.forEach(item => item.destroy());
+        this._controls.forEach(item => {
+            item.destroy();
+        });
+
+        this._controls.clear();
         this._indicator.destroy();
         super.destroy();
     }
@@ -215,11 +225,6 @@ const MediaControls = GObject.registerClass({
         this.emit('closed');
     }
 
-    destroy() {
-        this._mpris.destroy();
-        this._player.destroy();
-    }
-
     // HACK: addHeaderSuffix function insert spacer after suffix, so we need manually place suffix after spacer
     _appendSuffix(actor) {
         const {layoutManager: headerLayout} = this.menu._header;
@@ -267,15 +272,11 @@ const MediaControls = GObject.registerClass({
         this.artistLabel.clutter_text.set_markup(artist);
         this.menu.setHeader("audio-x-generic-symbolic", title, artist);
 
-
         this._icon.gicon = icon;
         this._icon.visible = !!icon;
 
         let isPlaying = this._player.status === 'Playing';
-        let iconName = isPlaying
-            ? 'media-playback-pause-symbolic'
-            : 'media-playback-start-symbolic';
-        this._playPauseButton.child.icon_name = iconName;
+        this._playPauseButton.child.icon_name = isPlaying ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
 
         this._updateNavButton(this._prevButton, this._player.hasPrevious);
         this._updateNavButton(this._playPauseButton, this._player.canPlay || this._player.canPause);

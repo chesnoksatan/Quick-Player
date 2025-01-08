@@ -104,27 +104,29 @@ export const ControlMenuItem = GObject.registerClass(
             this._updateNavButton(this._seekForwardButton, this._player.canSeek);
             this._updateNavButton(this._nextButton, this._player.hasNext);
 
-            this._updateNavButton(this._loopButton, this._player.canControl);
-            switch (this._player.loopStatus) {
-                case "None":
-                    this._loopButton.set_checked(false);
-                    this._loopButton.child.icon_name = "media-playlist-repeat-symbolic";
-                    break;
-                case "Track":
-                    this._loopButton.set_checked(true);
-                    this._loopButton.child.icon_name = "media-playlist-repeat-song-symbolic";
-                    break;
-                case "Playlist":
-                    this._loopButton.set_checked(true);
-                    this._loopButton.child.icon_name = "media-playlist-repeat-symbolic";
-                    break;
-                default:
-                    this._loopButton.child.icon_name = "media-playlist-repeat-symbolic";
-                    break;
+            if (this._player.loopStatus) {
+                this._updateNavButton(this._loopButton, this._player.canControl);
+                switch (this._player.loopStatus) {
+                    case "None":
+                        this._loopButton.set_checked(false);
+                        this._loopButton.child.icon_name = "media-playlist-repeat-symbolic";
+                        break;
+                    case "Track":
+                        this._loopButton.set_checked(true);
+                        this._loopButton.child.icon_name = "media-playlist-repeat-song-symbolic";
+                        break;
+                    case "Playlist":
+                        this._loopButton.set_checked(true);
+                        this._loopButton.child.icon_name = "media-playlist-repeat-symbolic";
+                        break;
+                    default:
+                        break;
+                }
+            } else {
+                this._loopButton.hide();
             }
 
             this._updateNavButton(this._shuffleButton, this._player.canControl);
-
             const shuffle = this._player.shuffle
             this._shuffleButton.set_checked(shuffle);
             if (shuffle) {

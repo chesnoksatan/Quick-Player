@@ -17,6 +17,8 @@ export class Feature {
     }
 
     enable() {
+        console.log("[QuickPlayerExtension]", "Enable feature");
+
         this.dBusProxy = DBusProxy(Gio.DBus.session, "org.freedesktop.DBus", "/org/freedesktop/DBus", this._onProxyReady.bind(this));
 
         let sibling = Main.panel.statusArea.quickSettings._brightness ?? null;
@@ -28,6 +30,8 @@ export class Feature {
     }
 
     _onProxyReady() {
+        console.log("[QuickPlayerExtension]", "DBus Proxy is ready");
+
         const [names] = this.dBusProxy.ListNamesSync();
 
         names.forEach((busAddress) => {
@@ -44,6 +48,9 @@ export class Feature {
         if (!name.startsWith(MPRIS_PLAYER_PREFIX))
             return;
 
+        console.log("[QuickPlayerExtension]", "Name Owner Changed");
+        console.log("[QuickPlayerExtension]", "From:", oldOwner, "To:", newOwner)
+
         if (newOwner && !oldOwner)
             this._add(name);
     }
@@ -52,4 +59,3 @@ export class Feature {
         this._indicator.addControls(busName);
     }
 }
-
