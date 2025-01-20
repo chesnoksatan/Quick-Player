@@ -44,6 +44,7 @@ export class Player extends Signals.EventEmitter {
 		}
 	}
 
+    // The org.freedesktop.DBus.Properties.PropertiesChanged signal is not emitted when this property changes
     _updatePosition() {
         if(this._timeout)
             this._removeTimeout();

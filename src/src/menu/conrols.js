@@ -24,7 +24,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._loopButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'media-playlist-repeat-song-symbolic',
-                y_expand: true,
             });
             this._loopButton.connect('clicked', () => this._player.toggleLoopStatus());
             this.box.add_child(this._loopButton);
@@ -33,7 +32,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._prevButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'media-skip-backward-symbolic',
-                y_expand: true,
             });
             this._prevButton.connect('clicked', () => this._player.previous());
             this.box.add_child(this._prevButton);
@@ -41,7 +39,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._seekBackwardButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'skip-backwards-10-symbolic',
-                y_expand: true,
             });
             this._seekBackwardButton.connect('clicked', () => this._seek(-10));
             this.box.add_child(this._seekBackwardButton);
@@ -49,7 +46,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._playPauseButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'media-playback-pause-symbolic',
-                y_expand: true,
             });
             this._playPauseButton.connect('clicked', () => this._player.toggleState());
             this.box.add_child(this._playPauseButton);
@@ -57,7 +53,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._seekForwardButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'skip-forward-10-symbolic',
-                y_expand: true,
             });
             this._seekForwardButton.connect('clicked', () => this._seek(10));
             this.box.add_child(this._seekForwardButton);
@@ -65,7 +60,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._nextButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'media-skip-forward-symbolic',
-                y_expand: true,
             });
             this._nextButton.connect('clicked', () => this._player.next());
             this.box.add_child(this._nextButton);
@@ -73,7 +67,6 @@ export const ControlMenuItem = GObject.registerClass(
             this._shuffleButton = new St.Button({
                 style_class: 'icon-button media-control-button',
                 iconName: 'media-playlist-shuffle-symbolic',
-                y_expand: true,
             });
             this._shuffleButton.connect('clicked', () => this._player.toggleShuffle());
             this.box.add_child(new Clutter.Actor({x_expand: true}));
@@ -105,6 +98,7 @@ export const ControlMenuItem = GObject.registerClass(
             this._updateNavButton(this._nextButton, this._player.hasNext);
 
             if (this._player.loopStatus) {
+                this._loopButton.show();
                 this._updateNavButton(this._loopButton, this._player.canControl);
                 switch (this._player.loopStatus) {
                     case "None":
@@ -126,13 +120,19 @@ export const ControlMenuItem = GObject.registerClass(
                 this._loopButton.hide();
             }
 
-            this._updateNavButton(this._shuffleButton, this._player.canControl);
-            const shuffle = this._player.shuffle
-            this._shuffleButton.set_checked(shuffle);
-            if (shuffle) {
-                this._shuffleButton.child.icon_name = "media-playlist-shuffle-symbolic";
+            if (this._player.shuffle !== null) {
+                this._shuffleButton.show();
+
+                this._updateNavButton(this._shuffleButton, this._player.canControl);
+                const shuffle = this._player.shuffle
+                this._shuffleButton.set_checked(shuffle);
+                if (shuffle) {
+                    this._shuffleButton.child.icon_name = "media-playlist-shuffle-symbolic";
+                } else {
+                    this._shuffleButton.child.icon_name = "media-playlist-no-shuffle-symbolic";
+                }
             } else {
-                this._shuffleButton.child.icon_name = "media-playlist-no-shuffle-symbolic";
+                this._shuffleButton.hide();
             }
         }
     }

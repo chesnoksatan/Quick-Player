@@ -16,6 +16,7 @@ export const ProgressMenuItem = GObject.registerClass(
             });
             this.set_vertical(true);
 
+            this._inDrag = false;
             this._player = player;
 
             this.slider = new Slider(0);
@@ -41,12 +42,22 @@ export const ProgressMenuItem = GObject.registerClass(
             });
             infoBox.add_child(this.lengthLabel)
 
-            this._sliderChangedId = this.slider.connect('notify::value', this._sliderChanged.bind(this));
             this._player.connectObject('changed', this._update.bind(this), this);
             this._update();
+
+            this._sliderChangedId = this.slider.connect('notify::value', this._sliderChanged.bind(this));
+            this.slider.connect('drag-begin', () => (this._inDrag = true));
+            this.slider.connect('drag-end', () => {
+                this._inDrag = false;
+                this._sliderChanged();
+            });
         }
 
         _sliderChanged() {
+            if (this._inDrag) {
+                return;
+            }
+
             this._player.setPosition(this._player.trackId, (this.slider.value * 100 * this._player.trackLength) / 100);
         }
 
@@ -60,12 +71,18 @@ export const ProgressMenuItem = GObject.registerClass(
             const trackLength = this._player.trackLength;
             const position = this._player.position;
 
+            this.slider.reactive = this._player.canSeek;
+
             if (position && trackLength) {
-                this._changeSlider(((position * 100.0) / trackLength) / 100);
-                this.show();
+
+                if (!this._inDrag) {
+                    this._changeSlider(((position * 100.0) / trackLength) / 100);
+                }
 
                 this.positionLabel.clutter_text.set_markup(this._formatTime(position));
                 this.lengthLabel.clutter_text.set_markup(this._formatTime(trackLength));
+
+                this.show();
             } else {
                 this.hide();
             }
